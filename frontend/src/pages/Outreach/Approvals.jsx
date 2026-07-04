@@ -1,14 +1,24 @@
 import { useEffect, useState } from "react";
 import { api } from "../../api";
 import { useToast } from "../../components/Toast";
-import { Badge, Button, Card, Empty, Input, Skeleton, fmt } from "../../components/ui";
+import {
+  Badge,
+  Button,
+  Card,
+  Empty,
+  Input,
+  Skeleton,
+  fmt,
+  fromDatetimeLocal,
+  toDatetimeLocal,
+} from "../../components/ui";
 
 export default function Approvals({ refreshKey, onChange }) {
   const toast = useToast();
   const [sends, setSends] = useState(null);
   const [open, setOpen] = useState(null);
   const [editing, setEditing] = useState(null); // send id being edited
-  const [draft, setDraft] = useState({ subject: "", body: "" });
+  const [draft, setDraft] = useState({ subject: "", body: "", scheduled_at: "" });
 
   async function load() {
     try {
@@ -32,15 +42,37 @@ export default function Approvals({ refreshKey, onChange }) {
     }
   }
 
+  // closeThread cancels any unsent send on the thread AND marks the thread dead in
+  // one step — cancelling the send alone would leave the thread "open," blocking
+  // re-adding the same contact later ("you already have an open thread").
+  async function cancelAndClose(s) {
+    try {
+      await api.closeThread(s.thread_id);
+      toast("Cancelled ✓", "success");
+      await load();
+      onChange?.();
+    } catch (e) {
+      toast(e.message, "error");
+    }
+  }
+
   function startEdit(s) {
     setEditing(s.id);
-    setDraft({ subject: s.subject, body: s.body });
+    setDraft({
+      subject: s.subject,
+      body: s.body,
+      scheduled_at: toDatetimeLocal(s.scheduled_at),
+    });
     setOpen(s.id);
   }
 
   async function saveEdit(id) {
     try {
-      await api.editSend(id, draft);
+      await api.editSend(id, {
+        subject: draft.subject,
+        body: draft.body,
+        scheduled_at: fromDatetimeLocal(draft.scheduled_at),
+      });
       toast("Draft updated ✓", "success");
       setEditing(null);
       await load();
@@ -90,6 +122,15 @@ export default function Approvals({ refreshKey, onChange }) {
                     onChange={(e) => setDraft({ ...draft, body: e.target.value })}
                   />
                 </label>
+                <Input
+                  label="Scheduled for"
+                  type="datetime-local"
+                  value={draft.scheduled_at}
+                  onChange={(e) => setDraft({ ...draft, scheduled_at: e.target.value })}
+                />
+                <p className="text-xs text-brand-muted">
+                  Doesn't auto-update from Settings changes — fix it here if it looks stale.
+                </p>
                 <div className="flex gap-2">
                   <Button onClick={() => saveEdit(s.id)}>Save</Button>
                   <Button variant="ghost" onClick={() => setEditing(null)}>Cancel</Button>
@@ -113,7 +154,7 @@ export default function Approvals({ refreshKey, onChange }) {
                     Approve
                   </Button>
                   <Button variant="ghost" onClick={() => startEdit(s)}>Edit</Button>
-                  <Button variant="danger" onClick={() => act(s.id, api.cancelSend, "Cancelled")}>
+                  <Button variant="danger" onClick={() => cancelAndClose(s)}>
                     Cancel
                   </Button>
                 </div>

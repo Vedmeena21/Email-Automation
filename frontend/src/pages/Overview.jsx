@@ -10,6 +10,27 @@ const SETUP_STEPS = [
   { key: "first_send_sent", label: "Queue & approve your first email", tab: "Add", cta: "New email →" },
 ];
 
+// Once a first draft is queued (pending approval or already further along) there's
+// no need to nag about "finishing setup" — nudge the user to approve it instead.
+function FirstQueuedPrompt({ goTo }) {
+  return (
+    <div className="md:col-span-2 rounded-2xl border border-blue-200 bg-gradient-to-b from-brand-blueSoft to-brand-panel p-5 flex items-center justify-between gap-4">
+      <div>
+        <div className="text-sm font-extrabold text-brand-ink">Your first email is queued 🎉</div>
+        <p className="text-sm text-brand-muted mt-1">
+          Review the draft and approve it so it can go out in your next send window.
+        </p>
+      </div>
+      <button
+        onClick={() => goTo("Outreach")}
+        className="shrink-0 text-sm font-bold text-brand-blue hover:text-brand-blueDark"
+      >
+        Review approvals →
+      </button>
+    </div>
+  );
+}
+
 // Progress card shown until every setup step is really done, then it vanishes.
 function SetupChecklist({ setup, goTo }) {
   if (!setup || setup.complete) return null;
@@ -103,12 +124,20 @@ export default function Overview({ refreshKey, goTo }) {
   }
 
   const needsAttention = s.needs_review > 0 || s.pending_approval > 0;
-  const pipelineEmpty = !s.scheduled && !s.active && !s.sent;
-  const outcomesEmpty = !s.positive && !s.negative && !s.ooo;
+  // "queued" = something has entered the send pipeline at all, sent or not —
+  // once true, the setup checklist's last step is functionally moot even
+  // before Gmail actually dispatches anything, so swap the nudge immediately.
+  const hasQueuedFirstEmail =
+    s.pending_approval > 0 || s.scheduled > 0 || s.sent > 0;
 
   return (
     <div className="grid gap-5 md:grid-cols-2">
-      <SetupChecklist setup={setup} goTo={goTo} />
+      {setup && !setup.complete && !hasQueuedFirstEmail && (
+        <SetupChecklist setup={setup} goTo={goTo} />
+      )}
+      {setup && !setup.complete && hasQueuedFirstEmail && (
+        <FirstQueuedPrompt goTo={goTo} />
+      )}
       <Card title="Needs your action">
         <div className="space-y-2">
           <Row

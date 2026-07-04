@@ -203,7 +203,7 @@ export default function App() {
           <main id="main-content" tabIndex={-1} className="p-5 sm:p-8 flex-1">
             {tab === "Overview" && <Overview refreshKey={refreshKey} goTo={setTab} />}
             {tab === "Add" && (
-              <AddContact templates={templates} onAdded={refresh} settings={me} />
+              <AddContact templates={templates} onAdded={refresh} settings={me} goTo={setTab} />
             )}
             {tab === "Board" && <Board refreshKey={refreshKey} goTo={setTab} />}
             {tab === "Outreach" && (
@@ -216,7 +216,7 @@ export default function App() {
               <Templates templates={templates} onChange={loadTemplates} />
             )}
             {tab === "Suppression" && <Suppression refreshKey={refreshKey} />}
-            {tab === "Settings" && <Settings />}
+            {tab === "Settings" && <Settings goTo={setTab} />}
           </main>
         </div>
       </div>

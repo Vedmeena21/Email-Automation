@@ -96,11 +96,19 @@ def working_days_between(start: date, end: date) -> int:
     return count
 
 
-def _random_dt_in_window(d: date, window: tuple[time, time]) -> datetime:
-    """Tz-aware datetime at a random second within the window on day `d`."""
+def _random_dt_in_window(d: date, window: tuple[time, time], *,
+                         not_before: datetime | None = None) -> datetime:
+    """Tz-aware datetime at a random second within the window on day `d`.
+
+    `not_before` clamps the earliest possible pick — needed when scheduling into a
+    window that's already in progress "today", so the random slot can't land in the
+    past (before `now`) inside that same window.
+    """
     tz = _tz()
     start_dt = tz.localize(datetime.combine(d, window[0]))
     end_dt = tz.localize(datetime.combine(d, window[1]))
+    if not_before is not None and not_before > start_dt:
+        start_dt = not_before
     span = int((end_dt - start_dt).total_seconds())
     return start_dt + timedelta(seconds=random.randint(0, max(span - 1, 0)))
 
@@ -119,9 +127,9 @@ def compute_send_time(now: datetime | None = None) -> datetime:
     today = now.date()
     if is_working_day(today):
         if now.time() < window_a[1]:
-            return _random_dt_in_window(today, window_a)
+            return _random_dt_in_window(today, window_a, not_before=now)
         if now.time() < window_b[1]:
-            return _random_dt_in_window(today, window_b)
+            return _random_dt_in_window(today, window_b, not_before=now)
     return _random_dt_in_window(next_working_day(today), window_a)
 
 

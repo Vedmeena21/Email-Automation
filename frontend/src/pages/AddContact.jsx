@@ -30,31 +30,7 @@ function label(v) {
   return v.replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase());
 }
 
-// Render text with any surviving {placeholder} visually marked as unresolved —
-// so "still a placeholder" is never mistaken for real content in the preview.
-function withPlaceholders(text) {
-  const out = [];
-  let last = 0;
-  let m;
-  const re = new RegExp(VAR_RE.source, "g");
-  while ((m = re.exec(text))) {
-    if (m.index > last) out.push(text.slice(last, m.index));
-    out.push(
-      <span
-        key={m.index}
-        className="rounded bg-amber-50 text-amber-700 px-1 border border-dashed border-amber-300"
-        title="Not filled in — this will send exactly as shown"
-      >
-        {m[0]}
-      </span>
-    );
-    last = m.index + m[0].length;
-  }
-  if (last < text.length) out.push(text.slice(last));
-  return out;
-}
-
-export default function AddContact({ templates, onAdded, settings }) {
+export default function AddContact({ templates, onAdded, settings, goTo }) {
   const toast = useToast();
   const [templateId, setTemplateId] = useState("");
   const [email, setEmail] = useState("");
@@ -114,6 +90,7 @@ export default function AddContact({ templates, onAdded, settings }) {
       setEmail("");
       toast("Draft queued — approve it under Outreach", "success");
       onAdded?.();
+      goTo?.("Overview");
     } catch (e) {
       // the cooldown guard is overridable — surface a "send anyway" choice
       if (/force to override/i.test(e.message)) setCooldownBlock(e.message);

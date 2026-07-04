@@ -37,6 +37,17 @@ def test_added_between_windows_lands_in_afternoon_window():
     assert t.date() == MON and time(14) <= t.time() < time(15)
 
 
+def test_added_inside_a_live_window_never_lands_in_the_past():
+    # Regression: compute_send_time used to pick a uniformly random second across
+    # the WHOLE window even when `now` was already inside it, so a contact added
+    # mid-window could get a scheduled_at earlier than `now` — i.e. in the past.
+    now = at(MON, 9, 45)  # window A is 09:00-10:00; already 45 minutes in
+    for _ in range(50):
+        t = scheduling.compute_send_time(now)
+        assert t >= now
+        assert t.date() == MON and time(9, 45) <= t.time() < time(10)
+
+
 def test_added_after_last_window_rolls_to_next_working_day_morning():
     t = scheduling.compute_send_time(at(MON, 16))
     assert t.date() == date(2026, 1, 6) and time(9) <= t.time() < time(10)

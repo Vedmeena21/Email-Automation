@@ -169,3 +169,20 @@ export function fmt(dt) {
     timeStyle: "short",
   });
 }
+
+// <input type="datetime-local"> wants "YYYY-MM-DDTHH:mm" in LOCAL time, with no
+// timezone suffix — Date's own ISO string is UTC, so this reads the browser's
+// local fields directly instead of slicing the ISO string (which would silently
+// shift the displayed time by the UTC offset).
+export function toDatetimeLocal(dt) {
+  if (!dt) return "";
+  const d = new Date(dt);
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+// Reverse of the above: a "YYYY-MM-DDTHH:mm" local-time string back into a real
+// Date, which JS then serializes with the correct UTC offset for the API.
+export function fromDatetimeLocal(value) {
+  return value ? new Date(value) : null;
+}

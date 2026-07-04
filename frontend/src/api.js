@@ -87,6 +87,7 @@ export const api = {
   editSend: (id, patch) =>
     req(`/sends/${id}`, { method: "PATCH", body: JSON.stringify(patch) }),
   approveSend: (id) => req(`/sends/${id}/approve`, { method: "POST" }),
+  unapproveSend: (id) => req(`/sends/${id}/unapprove`, { method: "POST" }),
   cancelSend: (id) => req(`/sends/${id}/cancel`, { method: "POST" }),
   closeThread: (id) => req(`/threads/${id}/close`, { method: "POST" }),
 

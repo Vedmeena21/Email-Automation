@@ -20,7 +20,8 @@ export default function Outreach({ refreshKey, onChange, stats }) {
           title="Scheduled queue"
           status="approved"
           refreshKey={refreshKey}
-          emptyText="Nothing scheduled yet — approved emails will queue up here."
+          onChange={onChange}
+          onEdited={() => setSub("Approvals")}
         />
       )}
       {sub === "Sent" && (

@@ -168,9 +168,31 @@ def approve_send(db: Session, send_id: int) -> None:
     db.commit()
 
 
+def unapprove_send(db: Session, send_id: int) -> dict:
+    """Send an approved-but-unsent draft back for review so it can be edited.
+
+    Re-approval is required afterwards — editing never bypasses human review.
+    """
+    row = db.execute(
+        text("UPDATE sends SET status='pending_approval' "
+             "WHERE id=:id AND status='approved' "
+             "RETURNING id, thread_id, type, subject, body, scheduled_at, sent_at, "
+             "status, error, attempts, gmail_message_id"),
+        {"id": send_id},
+    ).mappings().first()
+    if not row:
+        raise ValueError(f"send {send_id} not found or not approved")
+    audit.record(db, "send.unapprove", entity="send", entity_id=send_id)
+    db.commit()
+    return dict(row)
+
+
 def edit_send(db: Session, send_id: int, *, subject: str | None = None,
-              body: str | None = None) -> dict:
-    """Edit a still-pending draft's subject/body before approval; return the send."""
+              body: str | None = None, scheduled_at=None) -> dict:
+    """Edit a still-pending draft's subject/body/scheduled time before approval;
+    return the send. scheduled_at is never recomputed automatically (e.g. by
+    approving/unapproving, or by a later Settings change) — this is the only way
+    to correct a draft's send time once it's been queued under stale settings."""
     row = db.execute(
         text("SELECT status FROM sends WHERE id=:id"), {"id": send_id}
     ).first()
@@ -189,6 +211,9 @@ def edit_send(db: Session, send_id: int, *, subject: str | None = None,
             raise ValueError("body cannot be empty")
         sets.append("body=:body")
         params["body"] = body
+    if scheduled_at is not None:
+        sets.append("scheduled_at=:scheduled_at")
+        params["scheduled_at"] = scheduled_at
     if not sets:
         raise ValueError("nothing to update")
     # re-assert pending in the WHERE clause so a concurrent approve/claim can't be

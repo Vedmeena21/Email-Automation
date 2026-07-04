@@ -26,9 +26,21 @@ def add_contact(payload: ContactCreate, db: Session = Depends(get_db)):
 
 @router.patch("/sends/{send_id}", response_model=SendOut)
 def edit_send(send_id: int, payload: SendEdit, db: Session = Depends(get_db)):
-    """Edit a pending draft's subject/body before approving it."""
+    """Edit a pending draft's subject/body/scheduled time before approving it."""
     try:
-        return outreach.edit_send(db, send_id, subject=payload.subject, body=payload.body)
+        return outreach.edit_send(
+            db, send_id, subject=payload.subject, body=payload.body,
+            scheduled_at=payload.scheduled_at,
+        )
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+
+
+@router.post("/sends/{send_id}/unapprove", response_model=SendOut)
+def unapprove(send_id: int, db: Session = Depends(get_db)):
+    """Pull an approved-but-unsent draft back to pending so it can be edited."""
+    try:
+        return outreach.unapprove_send(db, send_id)
     except ValueError as e:
         raise HTTPException(400, str(e))
 

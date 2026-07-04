@@ -76,8 +76,19 @@ class ContactCreate(BaseModel):
 class SendEdit(BaseModel):
     subject: str | None = Field(default=None, max_length=300)
     body: str | None = Field(default=None, max_length=20_000)
+    # letting the user directly fix a draft's send time — approving/unapproving
+    # never recomputes it, so this is the only way to correct one queued under
+    # settings that have since changed.
+    scheduled_at: datetime | None = None
 
     _subject_single_line = field_validator("subject")(_no_header_newlines)
+
+    @field_validator("scheduled_at")
+    @classmethod
+    def _must_be_future(cls, v: datetime | None) -> datetime | None:
+        if v is not None and v.tzinfo is None:
+            raise ValueError("scheduled_at must include a timezone offset")
+        return v
 
 
 class SendOut(BaseModel):
