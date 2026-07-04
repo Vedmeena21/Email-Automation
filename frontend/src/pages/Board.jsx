@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { api } from "../api";
+import { useToast } from "../components/Toast";
 import { fmt, Skeleton } from "../components/ui";
 
 // Kanban pipeline of every thread, bucketed by where it stands in the send
@@ -10,6 +11,7 @@ const COLUMNS = [
   { id: "pending", title: "Pending approval", tab: "Outreach", accent: "bg-amber-400" },
   { id: "scheduled", title: "Scheduled", tab: "Outreach", accent: "bg-brand-blue" },
   { id: "awaiting", title: "Awaiting reply", tab: "Outreach", accent: "bg-sky-400" },
+  { id: "failed", title: "Failed", tab: null, accent: "bg-red-500" },
   { id: "replied", title: "Replied", tab: "Replies", accent: "bg-emerald-500" },
   { id: "closed", title: "Closed", tab: "Replies", accent: "bg-neutral-300" },
 ];
@@ -26,8 +28,9 @@ function bucket(t) {
     case "sending":
       return "scheduled";
     case "sent":
-    case "failed": // failed shows here with its error so it isn't lost
       return "awaiting";
+    case "failed": // never delivered — its own lane, not "awaiting a reply"
+      return "failed";
     default:
       return "closed"; // cancelled or no send left
   }
@@ -52,9 +55,11 @@ function Chip({ kind }) {
 }
 
 export default function Board({ refreshKey, goTo }) {
+  const toast = useToast();
   const [threads, setThreads] = useState(null);
   const [search, setSearch] = useState("");
   const [debounced, setDebounced] = useState("");
+  const [localRefresh, setLocalRefresh] = useState(0);
 
   // debounce so typing doesn't fire a query per keystroke
   useEffect(() => {
@@ -64,7 +69,17 @@ export default function Board({ refreshKey, goTo }) {
 
   useEffect(() => {
     api.listThreads(null, debounced || undefined).then(setThreads).catch(() => setThreads([]));
-  }, [refreshKey, debounced]);
+  }, [refreshKey, debounced, localRefresh]);
+
+  async function retry(t) {
+    try {
+      await api.retrySend(t.latest_send.id);
+      toast("Requeued for approval — review it in Outreach → Approvals", "success");
+      setLocalRefresh((n) => n + 1);
+    } catch (e) {
+      toast(e.message, "error");
+    }
+  }
 
   const lanes = useMemo(() => {
     const by = Object.fromEntries(COLUMNS.map((c) => [c.id, []]));
@@ -89,7 +104,7 @@ export default function Board({ refreshKey, goTo }) {
 
       {threads === null ? (
         <div
-          className="grid gap-4 md:grid-cols-2 xl:grid-cols-5 items-start"
+          className="grid gap-4 md:grid-cols-2 xl:grid-cols-6 items-start"
           aria-busy="true"
           aria-label="Loading pipeline"
         >
@@ -106,7 +121,7 @@ export default function Board({ refreshKey, goTo }) {
           No threads match "{debounced}".
         </div>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5 items-start">
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-6 items-start">
           {COLUMNS.map((col) => (
             <div key={col.id} className="rounded-2xl bg-brand-panel2/60 border border-brand-line">
               <div className="flex items-center gap-2 px-4 py-3">
@@ -130,7 +145,8 @@ export default function Board({ refreshKey, goTo }) {
                   return (
                     <button
                       key={t.id}
-                      onClick={() => goTo(col.tab)}
+                      onClick={() => (col.id === "failed" ? retry(t) : goTo(col.tab))}
+                      title={col.id === "failed" ? "Click to retry — requeues for approval" : undefined}
                       className="w-full text-left rounded-xl bg-brand-panel border border-brand-line p-3 hover:border-brand-blue/40 hover:shadow-sm transition-all"
                     >
                       <div className="flex items-start justify-between gap-2">

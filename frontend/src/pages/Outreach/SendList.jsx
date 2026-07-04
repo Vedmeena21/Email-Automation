@@ -21,6 +21,7 @@ export default function SendList({
   timeField = "scheduled_at",
   onChange,
   onEdited,
+  emptyText = "Nothing here yet.",
 }) {
   const toast = useToast();
   const [sends, setSends] = useState(null);

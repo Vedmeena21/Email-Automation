@@ -89,6 +89,7 @@ export const api = {
   approveSend: (id) => req(`/sends/${id}/approve`, { method: "POST" }),
   unapproveSend: (id) => req(`/sends/${id}/unapprove`, { method: "POST" }),
   cancelSend: (id) => req(`/sends/${id}/cancel`, { method: "POST" }),
+  retrySend: (id) => req(`/sends/${id}/retry`, { method: "POST" }),
   closeThread: (id) => req(`/threads/${id}/close`, { method: "POST" }),
 
   // threads / replies

@@ -90,7 +90,7 @@ export default function AddContact({ templates, onAdded, settings, goTo }) {
       setEmail("");
       toast("Draft queued — approve it under Outreach", "success");
       onAdded?.();
-      goTo?.("Overview");
+      goTo?.("Home");
     } catch (e) {
       // the cooldown guard is overridable — surface a "send anyway" choice
       if (/force to override/i.test(e.message)) setCooldownBlock(e.message);

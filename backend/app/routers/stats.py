@@ -20,6 +20,21 @@ def stats(db: Session = Depends(get_db)) -> dict:
             text("SELECT status, count(*) FROM threads GROUP BY status")
         ).all()
     )
+    # A thread only counts as "awaiting reply" if its most recent send actually
+    # went out — one whose latest send permanently failed never reached anyone,
+    # so it belongs in its own failed bucket, not lumped in with real sent mail.
+    active_awaiting = db.execute(
+        text(
+            """
+            SELECT count(*) FROM threads t
+            JOIN LATERAL (
+                SELECT status FROM sends s WHERE s.thread_id = t.id
+                ORDER BY s.id DESC LIMIT 1
+            ) ls ON true
+            WHERE t.status = 'active' AND ls.status = 'sent'
+            """
+        )
+    ).scalar()
     sent_total = send_counts.get("sent", 0)
     replied = (
         thread_counts.get("replied_unlabeled", 0)
@@ -38,6 +53,6 @@ def stats(db: Session = Depends(get_db)) -> dict:
         "positive": thread_counts.get("replied_positive", 0),
         "negative": thread_counts.get("replied_negative", 0),
         "ooo": thread_counts.get("ooo", 0),
-        "active": thread_counts.get("active", 0),
+        "active": active_awaiting,
         "reply_rate": reply_rate,
     }

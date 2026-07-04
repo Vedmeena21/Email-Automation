@@ -125,20 +125,15 @@ def setup_status(db: Session = Depends(get_db)) -> dict:
         text("SELECT sender_name FROM app_settings WHERE id=1")
     ).first()
     identity_set = bool(row and (row[0] or "").strip())
-    # excludes kind='example' — the seeded starter templates shouldn't let this
-    # step silently check itself off before the user has authored anything
-    template_created = bool(
-        db.execute(
-            text("SELECT 1 FROM templates WHERE is_active AND kind != 'example' LIMIT 1")
-        ).first()
-    )
     first_send_sent = bool(
         db.execute(text("SELECT 1 FROM sends WHERE status='sent' LIMIT 1")).first()
     )
+    # No "create a template" step: the seeded starter examples are fully
+    # functional (one of them is how the very first email gets sent), so
+    # requiring a hand-authored template on top of that is friction, not signal.
     steps = {
         "gmail_connected": gmail_connected,
         "identity_set": identity_set,
-        "template_created": template_created,
         "first_send_sent": first_send_sent,
     }
     return {**steps, "complete": all(steps.values())}

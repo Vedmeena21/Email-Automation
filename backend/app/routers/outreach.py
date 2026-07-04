@@ -58,6 +58,15 @@ def cancel(send_id: int, db: Session = Depends(get_db)):
     outreach.cancel_send(db, send_id)
 
 
+@router.post("/sends/{send_id}/retry", response_model=SendOut)
+def retry(send_id: int, db: Session = Depends(get_db)):
+    """Requeue a failed send back to pending_approval for re-review."""
+    try:
+        return outreach.retry_failed_send(db, send_id)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+
+
 @router.post("/threads/{thread_id}/close", status_code=204)
 def close_thread(thread_id: int, db: Session = Depends(get_db)):
     """Abandon a thread: mark it dead and cancel any unsent emails."""

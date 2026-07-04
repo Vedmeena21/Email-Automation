@@ -231,6 +231,26 @@ def edit_send(db: Session, send_id: int, *, subject: str | None = None,
     return dict(updated)
 
 
+def retry_failed_send(db: Session, send_id: int) -> dict:
+    """Requeue a permanently-failed send for review, same as an editable draft.
+
+    Goes back to pending_approval (not straight to approved) so a human confirms
+    it's still worth sending — the failure may mean the address itself is bad.
+    """
+    row = db.execute(
+        text("UPDATE sends SET status='pending_approval', attempts=0, error=NULL "
+             "WHERE id=:id AND status='failed' "
+             "RETURNING id, thread_id, type, subject, body, scheduled_at, sent_at, "
+             "status, error, attempts, gmail_message_id"),
+        {"id": send_id},
+    ).mappings().first()
+    if not row:
+        raise ValueError(f"send {send_id} not found or not failed")
+    audit.record(db, "send.retry", entity="send", entity_id=send_id)
+    db.commit()
+    return dict(row)
+
+
 def cancel_send(db: Session, send_id: int) -> None:
     """Cancel a not-yet-sent send."""
     res = db.execute(

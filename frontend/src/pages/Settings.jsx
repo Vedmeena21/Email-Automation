@@ -281,7 +281,7 @@ export default function Settings({ goTo }) {
       });
       setS({ ...saved });
       toast("Settings saved ✓", "success");
-      goTo?.("Overview");
+      goTo?.("Home");
     } catch (e) {
       toast(e.message, "error");
     } finally {

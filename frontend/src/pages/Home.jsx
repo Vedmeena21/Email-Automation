@@ -6,8 +6,7 @@ import { Card, SkeletonCard } from "../components/ui";
 const SETUP_STEPS = [
   { key: "gmail_connected", label: "Connect Gmail", hint: "configure in backend/.env" },
   { key: "identity_set", label: "Set your name & signature", tab: "Settings", cta: "Go to Settings →" },
-  { key: "template_created", label: "Create your first template", tab: "Templates", cta: "Go to Templates →" },
-  { key: "first_send_sent", label: "Queue & approve your first email", tab: "Add", cta: "New email →" },
+  { key: "first_send_sent", label: "Queue & approve your first email", tab: "Add", cta: "Compose →" },
 ];
 
 // Once a first draft is queued (pending approval or already further along) there's
@@ -104,7 +103,7 @@ function Row({ label, value, accent, onClick }) {
   );
 }
 
-export default function Overview({ refreshKey, goTo }) {
+export default function Home({ refreshKey, goTo }) {
   const [s, setS] = useState(null);
   const [setup, setSetup] = useState(null);
 
@@ -124,11 +123,14 @@ export default function Overview({ refreshKey, goTo }) {
   }
 
   const needsAttention = s.needs_review > 0 || s.pending_approval > 0;
-  // "queued" = something has entered the send pipeline at all, sent or not —
-  // once true, the setup checklist's last step is functionally moot even
-  // before Gmail actually dispatches anything, so swap the nudge immediately.
+  // Only nudge "approve your first email" while it's genuinely still in
+  // flight (queued or scheduled) and hasn't sent yet — once setup.first_send_sent
+  // is true, that milestone is done and this banner must stop claiming it isn't,
+  // even if some unrelated step (e.g. template_created) is still incomplete.
   const hasQueuedFirstEmail =
-    s.pending_approval > 0 || s.scheduled > 0 || s.sent > 0;
+    !setup?.first_send_sent && (s.pending_approval > 0 || s.scheduled > 0);
+  const pipelineEmpty = s.scheduled === 0 && s.active === 0 && s.sent === 0;
+  const outcomesEmpty = s.positive === 0 && s.negative === 0 && (s.ooo ?? 0) === 0;
 
   return (
     <div className="grid gap-5 md:grid-cols-2">
@@ -163,7 +165,7 @@ export default function Overview({ refreshKey, goTo }) {
       <Card title="Pipeline">
         <div className="space-y-2">
           <Row label="Scheduled to send" value={s.scheduled} accent="text-brand-blue" onClick={() => goTo("Outreach")} />
-          <Row label="Awaiting reply" value={s.active} accent="text-brand-blue" />
+          <Row label="Awaiting reply" value={s.active} accent="text-brand-blue" onClick={() => goTo("Board")} />
           <Row label="Sent total" value={s.sent} accent="text-emerald-600" onClick={() => goTo("Outreach")} />
           <Row label="Reply rate" value={`${s.reply_rate}%`} />
           {pipelineEmpty && (

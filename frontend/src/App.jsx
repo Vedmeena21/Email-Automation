@@ -13,7 +13,7 @@ import {
 } from "./components/icons";
 import AddContact from "./pages/AddContact";
 import Board from "./pages/Board";
-import Overview from "./pages/Overview";
+import Home from "./pages/Home";
 import Outreach from "./pages/Outreach";
 import Replies from "./pages/Replies";
 import Settings from "./pages/Settings";
@@ -21,13 +21,13 @@ import Suppression from "./pages/Suppression";
 import Templates from "./pages/Templates";
 
 const NAV = [
-  { id: "Overview", label: "Overview", Icon: IconGrid },
-  { id: "Add", label: "New email", Icon: IconPlus },
+  { id: "Home", label: "Home", Icon: IconGrid },
+  { id: "Add", label: "Compose", Icon: IconPlus },
   { id: "Board", label: "Pipeline", Icon: IconColumns },
   { id: "Outreach", label: "Outreach", Icon: IconSend, badge: "pending_approval" },
-  { id: "Replies", label: "Replies", Icon: IconMail, badge: "needs_review" },
+  { id: "Replies", label: "Inbox", Icon: IconMail, badge: "needs_review" },
   { id: "Templates", label: "Templates", Icon: IconList },
-  { id: "Suppression", label: "Suppression", Icon: IconBlock },
+  { id: "Suppression", label: "Do Not Contact", Icon: IconBlock },
   { id: "Settings", label: "Settings", Icon: IconSettings },
 ];
 
@@ -51,7 +51,7 @@ function initials(name) {
 }
 
 const SUBTITLES = {
-  Overview: "Where everything stands at a glance.",
+  Home: "Where everything stands at a glance.",
   Add: "Pick a template, fill the fields, and queue the email.",
   Board: "Every thread, laid out by where it stands.",
   Outreach: "Approvals, the scheduled queue, and your sent log.",
@@ -62,7 +62,7 @@ const SUBTITLES = {
 };
 
 export default function App() {
-  const [tab, setTab] = useState("Overview");
+  const [tab, setTab] = useState("Home");
   const [templates, setTemplates] = useState([]);
   const [stats, setStats] = useState({});
   const [me, setMe] = useState({ sender_name: "" });
@@ -176,7 +176,7 @@ export default function App() {
                   onClick={() => setTab("Add")}
                   className="bg-brand-blue text-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-brand-blueDark transition-colors"
                 >
-                  + New email
+                  + Compose
                 </button>
               </div>
             </div>
@@ -201,7 +201,7 @@ export default function App() {
           </header>
 
           <main id="main-content" tabIndex={-1} className="p-5 sm:p-8 flex-1">
-            {tab === "Overview" && <Overview refreshKey={refreshKey} goTo={setTab} />}
+            {tab === "Home" && <Home refreshKey={refreshKey} goTo={setTab} />}
             {tab === "Add" && (
               <AddContact templates={templates} onAdded={refresh} settings={me} goTo={setTab} />
             )}
